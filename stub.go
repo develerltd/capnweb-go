@@ -318,27 +318,27 @@ func (s *stubImpl) String() string {
 		s.path, refCount, disposed)
 }
 
-// StubFactory creates stubs for the session
-type StubFactory struct {
+// BasicStubFactory creates basic stubs for the session
+type BasicStubFactory struct {
 	session *Session
 }
 
-// NewStubFactory creates a new stub factory
-func NewStubFactory(session *Session) *StubFactory {
-	return &StubFactory{session: session}
+// NewBasicStubFactory creates a new basic stub factory
+func NewBasicStubFactory(session *Session) *BasicStubFactory {
+	return &BasicStubFactory{session: session}
 }
 
 // CreateImportStub creates a stub for a remote import
-func (f *StubFactory) CreateImportStub(importID ImportID) Stub {
+func (f *BasicStubFactory) CreateImportStub(importID ImportID) Stub {
 	return newStub(f.session, &importID, nil, PropertyPath{})
 }
 
 // CreateExportStub creates a stub for a local export
-func (f *StubFactory) CreateExportStub(exportID ExportID) Stub {
+func (f *BasicStubFactory) CreateExportStub(exportID ExportID) Stub {
 	return newStub(f.session, nil, &exportID, PropertyPath{})
 }
 
 // CreateLocalStub creates a stub for a local object (no RPC)
-func (f *StubFactory) CreateLocalStub() Stub {
+func (f *BasicStubFactory) CreateLocalStub() Stub {
 	return newStub(f.session, nil, nil, PropertyPath{})
 }

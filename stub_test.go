@@ -231,7 +231,7 @@ func TestStubRefCounting(t *testing.T) {
 	}
 }
 
-func TestStubFactory(t *testing.T) {
+func TestBasicStubFactory(t *testing.T) {
 	transport := &MemoryTransport{}
 	session, err := NewSession(transport)
 	if err != nil {
@@ -239,7 +239,7 @@ func TestStubFactory(t *testing.T) {
 	}
 	defer session.Close()
 
-	factory := NewStubFactory(session)
+	factory := NewBasicStubFactory(session)
 
 	// Test import stub creation
 	importID := ImportID(42)
