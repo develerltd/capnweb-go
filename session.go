@@ -277,6 +277,39 @@ func (s *Session) Send(ctx context.Context, msg Message) error {
 	return nil
 }
 
+// SendRequest sends a request and returns a promise for the response
+func (s *Session) SendRequest(ctx context.Context, request interface{}) (*Promise, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if s.closed {
+		return nil, fmt.Errorf("session is closed")
+	}
+
+	// Generate a new import ID for the response
+	importID := ImportID(atomic.AddInt64(&s.nextImportID, 1))
+
+	// Create the message as a push expression
+	msg := Message{
+		"push",
+		request,
+	}
+
+	// Send the message
+	if err := s.Send(ctx, msg); err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+
+	// Create and return a promise for the response
+	promise := &Promise{
+		session:  s,
+		exportID: ExportID(importID),
+		path:     PropertyPath{},
+	}
+
+	return promise, nil
+}
+
 // messageLoop processes incoming messages
 func (s *Session) messageLoop() {
 	for {
