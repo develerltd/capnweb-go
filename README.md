@@ -36,6 +36,16 @@ This is an early implementation focusing on the foundation layers. Currently imp
 - **Round-trip Compatibility**: Full serialization/deserialization cycle
 - **Stack Trace Support**: Error serialization with debugging information
 
+### ✅ Phase 1.4: Message Protocol
+
+- **Core Message Types**: push, pull, resolve, reject, release, abort
+- **Expression System**: Pipeline, remap, import, export expressions
+- **Protocol Versioning**: Version compatibility checking
+- **Message Validation**: Comprehensive message structure validation
+- **Size Limits**: 64MB message size protection
+- **Statistics Tracking**: Encoding/decoding performance metrics
+- **JSON Compatibility**: Full round-trip through standard JSON
+
 ## Transport Interface
 
 The transport layer provides the foundation for RPC communication:
@@ -113,14 +123,53 @@ result, err := deserializer.FromJSON(jsonBytes)
 - **Composite**: arrays, slices, maps, structs (with JSON tags)
 - **RPC Types**: functions, `RpcTarget`, stubs, promises
 
+## Message Protocol
+
+The protocol layer handles Cap'n Web RPC message encoding and transmission:
+
+```go
+// Create protocol with serialization support
+protocol := capnweb.NewProtocol(serializer, deserializer)
+
+// Create different message types
+pushMsg := protocol.NewPushMessage(expression, &exportID)
+pullMsg := protocol.NewPullMessage(importID)
+resolveMsg := protocol.NewResolveMessage(exportID, value)
+rejectMsg := protocol.NewRejectMessage(exportID, error)
+releaseMsg := protocol.NewReleaseMessage(importID, refCount)
+abortMsg := protocol.NewAbortMessage(reason, &code)
+
+// Encode/decode messages
+data, err := protocol.EncodeMessage(msg)
+msg, err := protocol.DecodeMessage(data)
+```
+
+### Message Types
+
+- **push**: New RPC call or expression evaluation
+- **pull**: Request promise resolution
+- **resolve**: Successful promise resolution
+- **reject**: Error promise resolution
+- **release**: Reference no longer needed
+- **abort**: Session termination due to error
+
+### Expression Types
+
+- **pipeline**: Method call chains (`obj.method(args)`)
+- **remap**: Map operations on arrays/objects
+- **import**: Reference to imported object
+- **export**: Reference to exported object
+
 ## Next Steps
 
 The following phases are planned:
 
-1. **Phase 1.4**: Message protocol definition
-2. **Phase 2**: RPC session management and stub system
-3. **Phase 3**: Type system and code generation
-4. **Phase 4+**: Advanced features like promise pipelining
+1. **Phase 2**: RPC session management and stub system
+2. **Phase 3**: Type system and code generation
+3. **Phase 4**: Advanced features like promise pipelining
+4. **Phase 5**: Transport implementations (HTTP batch, WebSocket)
+5. **Phase 6**: Advanced protocol features (streaming, map operations)
+6. **Phase 7**: Developer tooling and documentation
 
 ## Architecture
 
