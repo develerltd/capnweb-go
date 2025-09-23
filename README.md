@@ -26,6 +26,16 @@ This is an early implementation focusing on the foundation layers. Currently imp
 - **Value Type System**: Type classification and serialization hints
 - **Type Utilities**: Sets, predicates, and analysis functions
 
+### ✅ Phase 1.3: Serialization Foundation
+
+- **JSON-based Serialization**: Extended JSON with RPC type support
+- **Primitive Type Support**: All basic Go types (bool, numbers, strings, etc.)
+- **Special Type Handling**: `big.Int`, `time.Time`, `[]byte`, errors
+- **Composite Types**: Arrays, slices, maps, structs with JSON tags
+- **RPC Reference System**: Export/import placeholders for remote objects
+- **Round-trip Compatibility**: Full serialization/deserialization cycle
+- **Stack Trace Support**: Error serialization with debugging information
+
 ## Transport Interface
 
 The transport layer provides the foundation for RPC communication:
@@ -73,11 +83,41 @@ All transport functionality is fully tested including:
 - Statistics tracking
 - Context cancellation
 
+## Serialization System
+
+The serialization layer provides JSON-compatible encoding with RPC extensions:
+
+```go
+// Create serializer with export function for RPC references
+serializer := capnweb.NewSerializer(func(value interface{}) (capnweb.ExportID, error) {
+    return session.ExportStub(value)
+})
+
+// Serialize any Go value
+data, err := serializer.Serialize(myValue)
+jsonBytes, err := serializer.ToJSON(myValue)
+
+// Deserialize back to Go values
+deserializer := capnweb.NewDeserializer(func(id capnweb.ImportID, isPromise bool) (interface{}, error) {
+    return session.ImportStub(id, isPromise)
+})
+
+result, err := deserializer.Deserialize(data)
+result, err := deserializer.FromJSON(jsonBytes)
+```
+
+### Supported Types
+
+- **Primitives**: `bool`, `int*`, `uint*`, `float*`, `string`, `nil`
+- **Special**: `*big.Int`, `time.Time`, `[]byte`, `error` types
+- **Composite**: arrays, slices, maps, structs (with JSON tags)
+- **RPC Types**: functions, `RpcTarget`, stubs, promises
+
 ## Next Steps
 
 The following phases are planned:
 
-1. **Phase 1.2-1.4**: Core types, serialization, and message protocol
+1. **Phase 1.4**: Message protocol definition
 2. **Phase 2**: RPC session management and stub system
 3. **Phase 3**: Type system and code generation
 4. **Phase 4+**: Advanced features like promise pipelining

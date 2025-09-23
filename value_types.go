@@ -124,6 +124,11 @@ func TypeForValue(value interface{}) ValueType {
 			return ValueTypeNull
 		}
 
+		// Check for specific pointer types first
+		if rt.String() == "*big.Int" {
+			return ValueTypeBigInt
+		}
+
 		// Check interface implementations before dereferencing
 		if _, ok := value.(error); ok {
 			return ValueTypeError
