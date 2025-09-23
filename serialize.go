@@ -86,32 +86,24 @@ func (s *Serializer) serializeWithDepth(value interface{}, depth int) (interface
 		return value, nil
 
 	case ValueTypeBigInt:
-		// Convert big.Int to string representation
+		// Convert big.Int to JavaScript-compatible array format: ["bigint", "value"]
 		if bigInt, ok := value.(*big.Int); ok {
-			return SerializedValue{
-				Type:  "bigint",
-				Value: bigInt.String(),
-			}, nil
+			return []interface{}{"bigint", bigInt.String()}, nil
 		}
 		return nil, fmt.Errorf("invalid bigint value: %T", value)
 
 	case ValueTypeDate:
-		// Serialize time.Time as ISO string
+		// Serialize time.Time as JavaScript-compatible array format: ["date", milliseconds]
 		if t, ok := value.(time.Time); ok {
-			return SerializedValue{
-				Type:  "date",
-				Value: t.Format(s.Options.DateFormat),
-			}, nil
+			return []interface{}{"date", t.UnixMilli()}, nil
 		}
 		return nil, fmt.Errorf("invalid date value: %T", value)
 
 	case ValueTypeBytes:
-		// Encode byte slices as base64
+		// Encode byte slices as JavaScript-compatible array format: ["bytes", "base64"]
 		if bytes, ok := value.([]byte); ok {
-			return SerializedValue{
-				Type:  "bytes",
-				Value: bytes, // json.Marshal will base64 encode this
-			}, nil
+			encoded := base64.StdEncoding.EncodeToString(bytes)
+			return []interface{}{"bytes", encoded}, nil
 		}
 		return nil, fmt.Errorf("invalid bytes value: %T", value)
 
@@ -145,41 +137,38 @@ func (s *Serializer) serializeWithDepth(value interface{}, depth int) (interface
 }
 
 func (s *Serializer) serializeError(err error) (interface{}, error) {
-	result := SerializedValue{
-		Type: "error",
-		Value: map[string]interface{}{
-			"message": err.Error(),
-		},
-		Meta: make(map[string]interface{}),
+	// JavaScript-compatible error format: ["error", errorObject]
+	errorObj := map[string]interface{}{
+		"message": err.Error(),
 	}
 
-	// Add type information
-	result.Meta["errorType"] = reflect.TypeOf(err).String()
-
-	// Add stack trace if enabled
-	if s.Options.IncludeStackTraces {
-		// Try to get stack trace from the error if it supports it
-		if stackTracer, ok := err.(interface{ StackTrace() string }); ok {
-			result.Meta["stack"] = stackTracer.StackTrace()
-		} else {
-			// Fall back to current stack trace
-			buf := make([]byte, 1024*4)
-			n := runtime.Stack(buf, false)
-			result.Meta["stack"] = string(buf[:n])
-		}
-	}
-
-	// Handle RpcError specifically
+	// Handle RpcError specifically to preserve structure
 	if rpcErr, ok := err.(*RpcError); ok {
-		valueMap := result.Value.(map[string]interface{})
-		valueMap["type"] = rpcErr.Type
-		valueMap["code"] = rpcErr.Code
-		if rpcErr.Stack != "" {
-			result.Meta["stack"] = rpcErr.Stack
+		errorObj["name"] = rpcErr.Type
+		errorObj["message"] = rpcErr.Message
+		if rpcErr.Code != 0 {
+			errorObj["code"] = rpcErr.Code
+		}
+		if s.Options.IncludeStackTraces && rpcErr.Stack != "" {
+			errorObj["stack"] = rpcErr.Stack
+		}
+	} else {
+		// Regular error
+		errorObj["name"] = "Error"
+		if s.Options.IncludeStackTraces {
+			// Try to get stack trace from the error if it supports it
+			if stackTracer, ok := err.(interface{ StackTrace() string }); ok {
+				errorObj["stack"] = stackTracer.StackTrace()
+			} else {
+				// Fall back to current stack trace
+				buf := make([]byte, 1024*4)
+				n := runtime.Stack(buf, false)
+				errorObj["stack"] = string(buf[:n])
+			}
 		}
 	}
 
-	return result, nil
+	return []interface{}{"error", errorObj}, nil
 }
 
 func (s *Serializer) serializeArray(value interface{}, depth int) (interface{}, error) {
@@ -298,10 +287,8 @@ func (s *Serializer) serializeFunction(value interface{}) (interface{}, error) {
 		return nil, fmt.Errorf("failed to export function: %w", err)
 	}
 
-	return SerializedValue{
-		Type:  "function",
-		Value: exportID,
-	}, nil
+	// JavaScript-compatible format: ["export", exportID]
+	return []interface{}{"export", exportID}, nil
 }
 
 func (s *Serializer) serializeTarget(value interface{}) (interface{}, error) {
@@ -314,20 +301,9 @@ func (s *Serializer) serializeTarget(value interface{}) (interface{}, error) {
 		return nil, fmt.Errorf("failed to export RpcTarget: %w", err)
 	}
 
-	target := value.(RpcTarget)
-	result := SerializedValue{
-		Type:  "target",
-		Value: exportID,
-	}
-
-	// Add method information if available
-	if methods := target.RpcMethods(); methods != nil {
-		result.Meta = map[string]interface{}{
-			"methods": methods,
-		}
-	}
-
-	return result, nil
+	// JavaScript-compatible format: ["export", exportID]
+	// Note: JavaScript doesn't seem to distinguish between functions and targets in serialization
+	return []interface{}{"export", exportID}, nil
 }
 
 func (s *Serializer) serializeStub(value interface{}) (interface{}, error) {
@@ -335,33 +311,25 @@ func (s *Serializer) serializeStub(value interface{}) (interface{}, error) {
 
 	// Check if it's a local or remote stub
 	if importID := stub.GetImportID(); importID != nil {
-		return SerializedValue{
-			Type:  "import",
-			Value: *importID,
-		}, nil
+		// JavaScript-compatible format: ["import", importID]
+		return []interface{}{"import", *importID}, nil
 	}
 
 	if exportID := stub.GetExportID(); exportID != nil {
-		return SerializedValue{
-			Type:  "export",
-			Value: *exportID,
-		}, nil
+		// JavaScript-compatible format: ["export", exportID]
+		return []interface{}{"export", *exportID}, nil
 	}
 
 	return nil, fmt.Errorf("stub has neither import nor export ID")
 }
 
 func (s *Serializer) serializePromise(value interface{}) (interface{}, error) {
-	// Promises are handled similarly to stubs but with promise-specific metadata
+	// Promises are handled similarly to stubs in JavaScript
 	if stub, ok := value.(Stub); ok {
 		if importID := stub.GetImportID(); importID != nil {
-			return SerializedValue{
-				Type:  "promise",
-				Value: *importID,
-				Meta: map[string]interface{}{
-					"isPromise": true,
-				},
-			}, nil
+			// JavaScript-compatible format: ["import", importID]
+			// Note: JavaScript doesn't seem to distinguish promises from regular imports in serialization
+			return []interface{}{"import", *importID}, nil
 		}
 	}
 
@@ -412,25 +380,39 @@ func (d *Deserializer) deserializeValue(data interface{}) (interface{}, error) {
 	case bool, float64, string:
 		return v, nil
 
-	case map[string]interface{}:
-		// Check if this is a special RPC type
-		if typeStr, hasType := v["type"]; hasType {
-			return d.deserializeSpecialType(typeStr.(string), v)
+	case []interface{}:
+		// Check if this is a special RPC type (array format: ["type", value])
+		if len(v) >= 2 {
+			if typeStr, ok := v[0].(string); ok {
+				switch typeStr {
+				case "bigint", "date", "bytes", "error", "import", "export", "promise":
+					return d.deserializeArrayType(v)
+				}
+			}
 		}
+		// Regular array
+		return d.deserializeArray(v)
+
+	case map[string]interface{}:
 		// Regular object
 		return d.deserializeObject(v)
-
-	case []interface{}:
-		return d.deserializeArray(v)
 
 	default:
 		return v, nil
 	}
 }
 
-func (d *Deserializer) deserializeSpecialType(typeStr string, data map[string]interface{}) (interface{}, error) {
-	value := data["value"]
-	meta := data["meta"]
+func (d *Deserializer) deserializeArrayType(data []interface{}) (interface{}, error) {
+	if len(data) < 2 {
+		return nil, fmt.Errorf("invalid array type format: need at least 2 elements")
+	}
+
+	typeStr, ok := data[0].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid array type format: first element must be string")
+	}
+
+	value := data[1]
 
 	switch typeStr {
 	case "bigint":
@@ -443,41 +425,23 @@ func (d *Deserializer) deserializeSpecialType(typeStr string, data map[string]in
 		return nil, fmt.Errorf("invalid bigint value: %v", value)
 
 	case "date":
-		if str, ok := value.(string); ok {
-			return time.Parse(time.RFC3339Nano, str)
+		if millis, ok := value.(float64); ok {
+			return time.UnixMilli(int64(millis)), nil
 		}
 		return nil, fmt.Errorf("invalid date value: %v", value)
 
 	case "bytes":
-		if bytes, ok := value.([]byte); ok {
-			return bytes, nil
-		}
-		// Handle case where JSON decoded it as base64 string
 		if str, ok := value.(string); ok {
-			// The JSON unmarshaler keeps base64 encoded strings as strings
-			// We need to base64 decode it back to bytes
 			decoded, err := base64.StdEncoding.DecodeString(str)
 			if err != nil {
 				return nil, fmt.Errorf("failed to decode base64 bytes: %w", err)
 			}
 			return decoded, nil
 		}
-		// Handle case where JSON decoded it as []interface{}
-		if slice, ok := value.([]interface{}); ok {
-			result := make([]byte, len(slice))
-			for i, item := range slice {
-				if num, ok := item.(float64); ok {
-					result[i] = byte(num)
-				} else {
-					return nil, fmt.Errorf("invalid byte value at index %d: %v", i, item)
-				}
-			}
-			return result, nil
-		}
 		return nil, fmt.Errorf("invalid bytes value: %v", value)
 
 	case "error":
-		return d.deserializeError(value, meta)
+		return d.deserializeError(value, nil)
 
 	case "import":
 		if d.ImportFunc == nil {
@@ -499,6 +463,7 @@ func (d *Deserializer) deserializeSpecialType(typeStr string, data map[string]in
 		return nil, fmt.Errorf("invalid export ID: %v", value)
 
 	case "promise":
+		// Promises become import references with isPromise=true
 		if d.ImportFunc == nil {
 			return nil, fmt.Errorf("cannot deserialize promise: no import function provided")
 		}
@@ -506,24 +471,6 @@ func (d *Deserializer) deserializeSpecialType(typeStr string, data map[string]in
 			return d.ImportFunc(ImportID(id), true)
 		}
 		return nil, fmt.Errorf("invalid promise ID: %v", value)
-
-	case "function":
-		if d.ImportFunc == nil {
-			return nil, fmt.Errorf("cannot deserialize function: no import function provided")
-		}
-		if id, ok := value.(float64); ok {
-			return d.ImportFunc(ImportID(id), false)
-		}
-		return nil, fmt.Errorf("invalid function ID: %v", value)
-
-	case "target":
-		if d.ImportFunc == nil {
-			return nil, fmt.Errorf("cannot deserialize target: no import function provided")
-		}
-		if id, ok := value.(float64); ok {
-			return d.ImportFunc(ImportID(id), false)
-		}
-		return nil, fmt.Errorf("invalid target ID: %v", value)
 
 	default:
 		if d.Options.CreateUnknownTypes {
@@ -540,10 +487,10 @@ func (d *Deserializer) deserializeError(value interface{}, meta interface{}) (in
 			message = msg
 		}
 
-		// Check if it's an RpcError
-		if errorType, ok := valueMap["type"].(string); ok {
+		// Check if it's an RpcError (with "name" field indicating type)
+		if errorName, ok := valueMap["name"].(string); ok {
 			rpcErr := &RpcError{
-				Type:    errorType,
+				Type:    errorName,
 				Message: message,
 			}
 
@@ -551,10 +498,8 @@ func (d *Deserializer) deserializeError(value interface{}, meta interface{}) (in
 				rpcErr.Code = int(code)
 			}
 
-			if metaMap, ok := meta.(map[string]interface{}); ok {
-				if stack, ok := metaMap["stack"].(string); ok {
-					rpcErr.Stack = stack
-				}
+			if stack, ok := valueMap["stack"].(string); ok {
+				rpcErr.Stack = stack
 			}
 
 			return rpcErr, nil

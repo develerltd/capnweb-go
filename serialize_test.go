@@ -5,6 +5,7 @@ import (
 	"errors"
 	"math/big"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -63,17 +64,21 @@ func TestSerializerSpecialTypes(t *testing.T) {
 			t.Fatalf("Serialize failed: %v", err)
 		}
 
-		serialized, ok := result.(SerializedValue)
+		serialized, ok := result.([]interface{})
 		if !ok {
-			t.Fatalf("Expected SerializedValue, got %T", result)
+			t.Fatalf("Expected []interface{}, got %T", result)
 		}
 
-		if serialized.Type != "bigint" {
-			t.Errorf("Expected type 'bigint', got '%s'", serialized.Type)
+		if len(serialized) != 2 {
+			t.Fatalf("Expected 2 elements, got %d", len(serialized))
 		}
 
-		if serialized.Value != "12345678901234567890" {
-			t.Errorf("Expected '12345678901234567890', got '%v'", serialized.Value)
+		if serialized[0] != "bigint" {
+			t.Errorf("Expected type 'bigint', got '%s'", serialized[0])
+		}
+
+		if serialized[1] != "12345678901234567890" {
+			t.Errorf("Expected '12345678901234567890', got '%v'", serialized[1])
 		}
 	})
 
@@ -84,18 +89,22 @@ func TestSerializerSpecialTypes(t *testing.T) {
 			t.Fatalf("Serialize failed: %v", err)
 		}
 
-		serialized, ok := result.(SerializedValue)
+		serialized, ok := result.([]interface{})
 		if !ok {
-			t.Fatalf("Expected SerializedValue, got %T", result)
+			t.Fatalf("Expected []interface{}, got %T", result)
 		}
 
-		if serialized.Type != "date" {
-			t.Errorf("Expected type 'date', got '%s'", serialized.Type)
+		if len(serialized) != 2 {
+			t.Fatalf("Expected 2 elements, got %d", len(serialized))
 		}
 
-		expectedValue := now.Format(time.RFC3339Nano)
-		if serialized.Value != expectedValue {
-			t.Errorf("Expected '%s', got '%v'", expectedValue, serialized.Value)
+		if serialized[0] != "date" {
+			t.Errorf("Expected type 'date', got '%s'", serialized[0])
+		}
+
+		expectedValue := int64(now.UnixMilli())
+		if actualValue, ok := serialized[1].(int64); !ok || actualValue != expectedValue {
+			t.Errorf("Expected %v, got %v", expectedValue, serialized[1])
 		}
 	})
 
@@ -106,24 +115,29 @@ func TestSerializerSpecialTypes(t *testing.T) {
 			t.Fatalf("Serialize failed: %v", err)
 		}
 
-		serialized, ok := result.(SerializedValue)
+		serialized, ok := result.([]interface{})
 		if !ok {
-			t.Fatalf("Expected SerializedValue, got %T", result)
+			t.Fatalf("Expected []interface{}, got %T", result)
 		}
 
-		if serialized.Type != "bytes" {
-			t.Errorf("Expected type 'bytes', got '%s'", serialized.Type)
+		if len(serialized) != 2 {
+			t.Fatalf("Expected 2 elements, got %d", len(serialized))
 		}
 
-		if !reflect.DeepEqual(serialized.Value, bytes) {
-			t.Errorf("Expected %v, got %v", bytes, serialized.Value)
+		if serialized[0] != "bytes" {
+			t.Errorf("Expected type 'bytes', got '%s'", serialized[0])
+		}
+
+		expectedValue := "AQIDBAU="  // base64 encoding of [1,2,3,4,5]
+		if serialized[1] != expectedValue {
+			t.Errorf("Expected %v, got %v", expectedValue, serialized[1])
 		}
 	})
 }
 
 func TestSerializerError(t *testing.T) {
 	serializer := NewSerializer(nil)
-	serializer.Options.IncludeStackTraces = false // Simplify test
+	// Keep IncludeStackTraces = true for RpcError test
 
 	t.Run("regular error", func(t *testing.T) {
 		err := errors.New("test error")
@@ -132,18 +146,22 @@ func TestSerializerError(t *testing.T) {
 			t.Fatalf("Serialize failed: %v", serErr)
 		}
 
-		serialized, ok := result.(SerializedValue)
+		serialized, ok := result.([]interface{})
 		if !ok {
-			t.Fatalf("Expected SerializedValue, got %T", result)
+			t.Fatalf("Expected []interface{}, got %T", result)
 		}
 
-		if serialized.Type != "error" {
-			t.Errorf("Expected type 'error', got '%s'", serialized.Type)
+		if len(serialized) != 2 {
+			t.Fatalf("Expected 2 elements, got %d", len(serialized))
 		}
 
-		valueMap, ok := serialized.Value.(map[string]interface{})
+		if serialized[0] != "error" {
+			t.Errorf("Expected type 'error', got '%s'", serialized[0])
+		}
+
+		valueMap, ok := serialized[1].(map[string]interface{})
 		if !ok {
-			t.Fatalf("Expected map value, got %T", serialized.Value)
+			t.Fatalf("Expected map value, got %T", serialized[1])
 		}
 
 		if valueMap["message"] != "test error" {
@@ -164,22 +182,30 @@ func TestSerializerError(t *testing.T) {
 			t.Fatalf("Serialize failed: %v", serErr)
 		}
 
-		serialized, ok := result.(SerializedValue)
+		serialized, ok := result.([]interface{})
 		if !ok {
-			t.Fatalf("Expected SerializedValue, got %T", result)
+			t.Fatalf("Expected []interface{}, got %T", result)
 		}
 
-		valueMap := serialized.Value.(map[string]interface{})
-		if valueMap["type"] != "TestError" {
-			t.Errorf("Expected type 'TestError', got '%v'", valueMap["type"])
+		if len(serialized) != 2 {
+			t.Fatalf("Expected 2 elements, got %d", len(serialized))
+		}
+
+		if serialized[0] != "error" {
+			t.Errorf("Expected type 'error', got '%s'", serialized[0])
+		}
+
+		valueMap := serialized[1].(map[string]interface{})
+		if valueMap["name"] != "TestError" {
+			t.Errorf("Expected name 'TestError', got '%v'", valueMap["name"])
 		}
 
 		if valueMap["code"] != 1001 {
 			t.Errorf("Expected code 1001, got '%v'", valueMap["code"])
 		}
 
-		if serialized.Meta["stack"] != "test stack" {
-			t.Errorf("Expected stack 'test stack', got '%v'", serialized.Meta["stack"])
+		if valueMap["stack"] != "test stack" {
+			t.Errorf("Expected stack 'test stack', got '%v'", valueMap["stack"])
 		}
 	})
 }
@@ -311,17 +337,21 @@ func TestSerializerRpcTypes(t *testing.T) {
 			t.Fatalf("Serialize failed: %v", err)
 		}
 
-		serialized, ok := result.(SerializedValue)
+		serialized, ok := result.([]interface{})
 		if !ok {
-			t.Fatalf("Expected SerializedValue, got %T", result)
+			t.Fatalf("Expected []interface{}, got %T", result)
 		}
 
-		if serialized.Type != "function" {
-			t.Errorf("Expected type 'function', got '%s'", serialized.Type)
+		if len(serialized) != 2 {
+			t.Fatalf("Expected 2 elements, got %d", len(serialized))
 		}
 
-		if serialized.Value != ExportID(1) {
-			t.Errorf("Expected export ID 1, got %v", serialized.Value)
+		if serialized[0] != "export" {
+			t.Errorf("Expected type 'export', got '%s'", serialized[0])
+		}
+
+		if serialized[1] != ExportID(1) {
+			t.Errorf("Expected export ID 1, got %v", serialized[1])
 		}
 	})
 
@@ -332,28 +362,25 @@ func TestSerializerRpcTypes(t *testing.T) {
 			t.Fatalf("Serialize failed: %v", err)
 		}
 
-		serialized, ok := result.(SerializedValue)
+		serialized, ok := result.([]interface{})
 		if !ok {
-			t.Fatalf("Expected SerializedValue, got %T", result)
+			t.Fatalf("Expected []interface{}, got %T", result)
 		}
 
-		if serialized.Type != "target" {
-			t.Errorf("Expected type 'target', got '%s'", serialized.Type)
+		if len(serialized) != 2 {
+			t.Fatalf("Expected 2 elements, got %d", len(serialized))
 		}
 
-		if serialized.Value != ExportID(2) {
-			t.Errorf("Expected export ID 2, got %v", serialized.Value)
+		if serialized[0] != "export" {
+			t.Errorf("Expected type 'export', got '%s'", serialized[0])
 		}
 
-		// Check methods metadata
-		if serialized.Meta == nil {
-			t.Error("Expected metadata for methods")
-		} else if methods, ok := serialized.Meta["methods"]; ok {
-			methodList := methods.([]string)
-			if len(methodList) != 2 || methodList[0] != "TestMethod" || methodList[1] != "AnotherMethod" {
-				t.Errorf("Expected specific methods, got %v", methodList)
-			}
+		if serialized[1] != ExportID(2) {
+			t.Errorf("Expected export ID 2, got %v", serialized[1])
 		}
+
+		// Note: Methods metadata is no longer part of the serialized format
+		// in the new array-based format - it's handled differently
 	})
 
 	t.Run("stub", func(t *testing.T) {
@@ -365,17 +392,21 @@ func TestSerializerRpcTypes(t *testing.T) {
 			t.Fatalf("Serialize failed: %v", err)
 		}
 
-		serialized, ok := result.(SerializedValue)
+		serialized, ok := result.([]interface{})
 		if !ok {
-			t.Fatalf("Expected SerializedValue, got %T", result)
+			t.Fatalf("Expected []interface{}, got %T", result)
 		}
 
-		if serialized.Type != "import" {
-			t.Errorf("Expected type 'import', got '%s'", serialized.Type)
+		if len(serialized) != 2 {
+			t.Fatalf("Expected 2 elements, got %d", len(serialized))
 		}
 
-		if serialized.Value != ImportID(42) {
-			t.Errorf("Expected import ID 42, got %v", serialized.Value)
+		if serialized[0] != "import" {
+			t.Errorf("Expected type 'import', got '%s'", serialized[0])
+		}
+
+		if serialized[1] != ImportID(42) {
+			t.Errorf("Expected import ID 42, got %v", serialized[1])
 		}
 	})
 }
@@ -412,9 +443,9 @@ func TestDeserializerSpecialTypes(t *testing.T) {
 	deserializer := NewDeserializer(nil)
 
 	t.Run("bigint", func(t *testing.T) {
-		input := map[string]interface{}{
-			"type":  "bigint",
-			"value": "12345678901234567890",
+		input := []interface{}{
+			"bigint",
+			"12345678901234567890",
 		}
 
 		result, err := deserializer.Deserialize(input)
@@ -437,11 +468,11 @@ func TestDeserializerSpecialTypes(t *testing.T) {
 
 	t.Run("date", func(t *testing.T) {
 		now := time.Now()
-		dateStr := now.Format(time.RFC3339Nano)
+		milliseconds := float64(now.UnixMilli())
 
-		input := map[string]interface{}{
-			"type":  "date",
-			"value": dateStr,
+		input := []interface{}{
+			"date",
+			milliseconds,
 		}
 
 		result, err := deserializer.Deserialize(input)
@@ -454,16 +485,16 @@ func TestDeserializerSpecialTypes(t *testing.T) {
 			t.Fatalf("Expected time.Time, got %T", result)
 		}
 
-		// Compare with some tolerance due to nanosecond precision
-		if date.Sub(now).Abs() > time.Millisecond {
+		// Compare with some tolerance due to millisecond precision
+		if date.Sub(now).Abs() > time.Second {
 			t.Errorf("Expected time close to %v, got %v", now, date)
 		}
 	})
 
 	t.Run("bytes", func(t *testing.T) {
-		input := map[string]interface{}{
-			"type":  "bytes",
-			"value": []byte{1, 2, 3, 4, 5},
+		input := []interface{}{
+			"bytes",
+			"AQIDBAU=", // base64 encoding of [1,2,3,4,5]
 		}
 
 		result, err := deserializer.Deserialize(input)
@@ -487,9 +518,9 @@ func TestDeserializerError(t *testing.T) {
 	deserializer := NewDeserializer(nil)
 
 	t.Run("regular error", func(t *testing.T) {
-		input := map[string]interface{}{
-			"type": "error",
-			"value": map[string]interface{}{
+		input := []interface{}{
+			"error",
+			map[string]interface{}{
 				"message": "test error",
 			},
 		}
@@ -510,15 +541,13 @@ func TestDeserializerError(t *testing.T) {
 	})
 
 	t.Run("RpcError", func(t *testing.T) {
-		input := map[string]interface{}{
-			"type": "error",
-			"value": map[string]interface{}{
-				"type":    "TestError",
+		input := []interface{}{
+			"error",
+			map[string]interface{}{
+				"name":    "TestError",
 				"message": "test message",
 				"code":    float64(1001),
-			},
-			"meta": map[string]interface{}{
-				"stack": "test stack",
+				"stack":   "test stack",
 			},
 		}
 
@@ -567,9 +596,9 @@ func TestDeserializerRpcTypes(t *testing.T) {
 	deserializer := NewDeserializer(importFunc)
 
 	t.Run("import", func(t *testing.T) {
-		input := map[string]interface{}{
-			"type":  "import",
-			"value": float64(42),
+		input := []interface{}{
+			"import",
+			float64(42),
 		}
 
 		result, err := deserializer.Deserialize(input)
@@ -594,9 +623,9 @@ func TestDeserializerRpcTypes(t *testing.T) {
 	t.Run("promise", func(t *testing.T) {
 		importCalls = nil // Reset
 
-		input := map[string]interface{}{
-			"type":  "promise",
-			"value": float64(24),
+		input := []interface{}{
+			"promise",
+			float64(24),
 		}
 
 		_, err := deserializer.Deserialize(input)
@@ -694,8 +723,12 @@ func TestSerializationRoundTrip(t *testing.T) {
 
 			case error:
 				if resultErr, ok := result.(error); ok {
-					if expected.Error() != resultErr.Error() {
-						t.Errorf("Error mismatch: expected %q, got %q", expected.Error(), resultErr.Error())
+					// After round trip, regular errors become RpcErrors with type "Error"
+					// So we check if the original message is contained in the result
+					expectedMsg := expected.Error()
+					actualMsg := resultErr.Error()
+					if !strings.Contains(actualMsg, expectedMsg) {
+						t.Errorf("Error mismatch: expected message %q to be contained in %q", expectedMsg, actualMsg)
 					}
 				} else {
 					t.Errorf("Expected error, got %T", result)

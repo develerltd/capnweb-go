@@ -62,25 +62,16 @@ func TestMessageCreationHelpers(t *testing.T) {
 		expression := "test expression"
 		msg := protocol.NewPushMessage(expression, &exportID)
 
-		if msg.Type != MessageTypePush {
-			t.Errorf("Expected type %q, got %q", MessageTypePush, msg.Type)
+		if len(msg) < 2 {
+			t.Fatalf("Expected at least 2 elements in message, got %d", len(msg))
 		}
 
-		if msg.Version != protocol.Version {
-			t.Errorf("Expected version %q, got %q", protocol.Version, msg.Version)
+		if msg[0] != "push" {
+			t.Errorf("Expected type %q, got %q", "push", msg[0])
 		}
 
-		pushData, ok := msg.Data.(PushData)
-		if !ok {
-			t.Fatalf("Expected PushData, got %T", msg.Data)
-		}
-
-		if pushData.Expression != expression {
-			t.Errorf("Expected expression %q, got %v", expression, pushData.Expression)
-		}
-
-		if pushData.ExportID == nil || *pushData.ExportID != exportID {
-			t.Errorf("Expected export ID %v, got %v", exportID, pushData.ExportID)
+		if msg[1] != expression {
+			t.Errorf("Expected expression %q, got %v", expression, msg[1])
 		}
 	})
 
@@ -88,17 +79,16 @@ func TestMessageCreationHelpers(t *testing.T) {
 		importID := ImportID(24)
 		msg := protocol.NewPullMessage(importID)
 
-		if msg.Type != MessageTypePull {
-			t.Errorf("Expected type %q, got %q", MessageTypePull, msg.Type)
+		if len(msg) < 2 {
+			t.Fatalf("Expected at least 2 elements in message, got %d", len(msg))
 		}
 
-		pullData, ok := msg.Data.(PullData)
-		if !ok {
-			t.Fatalf("Expected PullData, got %T", msg.Data)
+		if msg[0] != "pull" {
+			t.Errorf("Expected type %q, got %q", "pull", msg[0])
 		}
 
-		if pullData.ImportID != importID {
-			t.Errorf("Expected import ID %v, got %v", importID, pullData.ImportID)
+		if msg[1] != importID {
+			t.Errorf("Expected import ID %v, got %v", importID, msg[1])
 		}
 	})
 
@@ -107,21 +97,20 @@ func TestMessageCreationHelpers(t *testing.T) {
 		value := "resolved value"
 		msg := protocol.NewResolveMessage(exportID, value)
 
-		if msg.Type != MessageTypeResolve {
-			t.Errorf("Expected type %q, got %q", MessageTypeResolve, msg.Type)
+		if len(msg) < 3 {
+			t.Fatalf("Expected at least 3 elements in message, got %d", len(msg))
 		}
 
-		resolveData, ok := msg.Data.(ResolveData)
-		if !ok {
-			t.Fatalf("Expected ResolveData, got %T", msg.Data)
+		if msg[0] != "resolve" {
+			t.Errorf("Expected type %q, got %q", "resolve", msg[0])
 		}
 
-		if resolveData.ExportID != exportID {
-			t.Errorf("Expected export ID %v, got %v", exportID, resolveData.ExportID)
+		if msg[1] != exportID {
+			t.Errorf("Expected export ID %v, got %v", exportID, msg[1])
 		}
 
-		if resolveData.Value != value {
-			t.Errorf("Expected value %q, got %v", value, resolveData.Value)
+		if msg[2] != value {
+			t.Errorf("Expected value %q, got %v", value, msg[2])
 		}
 	})
 
@@ -130,21 +119,20 @@ func TestMessageCreationHelpers(t *testing.T) {
 		errorValue := "error occurred"
 		msg := protocol.NewRejectMessage(exportID, errorValue)
 
-		if msg.Type != MessageTypeReject {
-			t.Errorf("Expected type %q, got %q", MessageTypeReject, msg.Type)
+		if len(msg) < 3 {
+			t.Fatalf("Expected at least 3 elements in message, got %d", len(msg))
 		}
 
-		rejectData, ok := msg.Data.(RejectData)
-		if !ok {
-			t.Fatalf("Expected RejectData, got %T", msg.Data)
+		if msg[0] != "reject" {
+			t.Errorf("Expected type %q, got %q", "reject", msg[0])
 		}
 
-		if rejectData.ExportID != exportID {
-			t.Errorf("Expected export ID %v, got %v", exportID, rejectData.ExportID)
+		if msg[1] != exportID {
+			t.Errorf("Expected export ID %v, got %v", exportID, msg[1])
 		}
 
-		if rejectData.Error != errorValue {
-			t.Errorf("Expected error %q, got %v", errorValue, rejectData.Error)
+		if msg[2] != errorValue {
+			t.Errorf("Expected error %q, got %v", errorValue, msg[2])
 		}
 	})
 
@@ -153,21 +141,20 @@ func TestMessageCreationHelpers(t *testing.T) {
 		refCount := uint32(5)
 		msg := protocol.NewReleaseMessage(importID, refCount)
 
-		if msg.Type != MessageTypeRelease {
-			t.Errorf("Expected type %q, got %q", MessageTypeRelease, msg.Type)
+		if len(msg) < 3 {
+			t.Fatalf("Expected at least 3 elements in message, got %d", len(msg))
 		}
 
-		releaseData, ok := msg.Data.(ReleaseData)
-		if !ok {
-			t.Fatalf("Expected ReleaseData, got %T", msg.Data)
+		if msg[0] != "release" {
+			t.Errorf("Expected type %q, got %q", "release", msg[0])
 		}
 
-		if releaseData.ImportID != importID {
-			t.Errorf("Expected import ID %v, got %v", importID, releaseData.ImportID)
+		if msg[1] != importID {
+			t.Errorf("Expected import ID %v, got %v", importID, msg[1])
 		}
 
-		if releaseData.RefCount != refCount {
-			t.Errorf("Expected ref count %v, got %v", refCount, releaseData.RefCount)
+		if msg[2] != refCount {
+			t.Errorf("Expected ref count %v, got %v", refCount, msg[2])
 		}
 	})
 
@@ -176,22 +163,19 @@ func TestMessageCreationHelpers(t *testing.T) {
 		code := 500
 		msg := protocol.NewAbortMessage(reason, &code)
 
-		if msg.Type != MessageTypeAbort {
-			t.Errorf("Expected type %q, got %q", MessageTypeAbort, msg.Type)
+		if len(msg) < 2 {
+			t.Fatalf("Expected at least 2 elements in message, got %d", len(msg))
 		}
 
-		abortData, ok := msg.Data.(AbortData)
-		if !ok {
-			t.Fatalf("Expected AbortData, got %T", msg.Data)
+		if msg[0] != "abort" {
+			t.Errorf("Expected type %q, got %q", "abort", msg[0])
 		}
 
-		if abortData.Reason != reason {
-			t.Errorf("Expected reason %q, got %v", reason, abortData.Reason)
+		if msg[1] != reason {
+			t.Errorf("Expected reason %q, got %v", reason, msg[1])
 		}
 
-		if abortData.Code == nil || *abortData.Code != code {
-			t.Errorf("Expected code %v, got %v", code, abortData.Code)
-		}
+		// Note: code parameter is ignored in the new array format per protocol.go
 	})
 }
 
@@ -300,7 +284,7 @@ func TestMessageEncodeDecodeWithoutSerialization(t *testing.T) {
 	protocol := NewProtocol(nil, nil)
 
 	// Test each message type
-	messages := []*Message{
+	messages := []Message{
 		protocol.NewPushMessage("test expression", nil),
 		protocol.NewPullMessage(ImportID(42)),
 		protocol.NewResolveMessage(ExportID(24), "resolved"),
@@ -310,7 +294,8 @@ func TestMessageEncodeDecodeWithoutSerialization(t *testing.T) {
 	}
 
 	for _, originalMsg := range messages {
-		t.Run(string(originalMsg.Type), func(t *testing.T) {
+		msgType := originalMsg[0].(string)
+		t.Run(msgType, func(t *testing.T) {
 			// Encode
 			data, err := protocol.EncodeMessage(originalMsg)
 			if err != nil {
@@ -323,19 +308,22 @@ func TestMessageEncodeDecodeWithoutSerialization(t *testing.T) {
 				t.Fatalf("Failed to decode message: %v", err)
 			}
 
-			// Compare
-			if decodedMsg.Type != originalMsg.Type {
-				t.Errorf("Type mismatch: expected %q, got %q", originalMsg.Type, decodedMsg.Type)
+			// Compare message type
+			if decodedMsg[0] != originalMsg[0] {
+				t.Errorf("Type mismatch: expected %q, got %q", originalMsg[0], decodedMsg[0])
 			}
 
-			if decodedMsg.Version != originalMsg.Version {
-				t.Errorf("Version mismatch: expected %q, got %q", originalMsg.Version, decodedMsg.Version)
+			// Compare message length
+			if len(decodedMsg) != len(originalMsg) {
+				t.Errorf("Length mismatch: expected %d, got %d", len(originalMsg), len(decodedMsg))
 			}
 
-			// Note: Data comparison is complex due to interface{} types and JSON marshaling
-			// For now, we just verify that data is present where expected
-			if originalMsg.Data != nil && decodedMsg.Data == nil {
-				t.Error("Expected data in decoded message")
+			// Basic comparison of message contents
+			// Note: Deep comparison is complex due to JSON marshaling effects on numeric types
+			for i := 0; i < len(originalMsg) && i < len(decodedMsg); i++ {
+				if originalMsg[i] != nil && decodedMsg[i] == nil {
+					t.Errorf("Expected data at index %d in decoded message", i)
+				}
 			}
 		})
 	}
@@ -385,12 +373,16 @@ func TestMessageEncodeDecodeWithSerialization(t *testing.T) {
 		}
 
 		// Verify structure
-		if decodedMsg.Type != MessageTypePush {
-			t.Errorf("Expected type %q, got %q", MessageTypePush, decodedMsg.Type)
+		if len(decodedMsg) < 2 {
+			t.Fatalf("Expected at least 2 elements in message, got %d", len(decodedMsg))
+		}
+
+		if decodedMsg[0] != "push" {
+			t.Errorf("Expected type %q, got %q", "push", decodedMsg[0])
 		}
 
 		// The data should be deserialized back to a Go value
-		if decodedMsg.Data == nil {
+		if decodedMsg[1] == nil {
 			t.Fatal("Expected data in decoded message")
 		}
 	})
@@ -400,14 +392,13 @@ func TestMessageValidation(t *testing.T) {
 	protocol := NewProtocol(nil, nil)
 
 	t.Run("ValidMessages", func(t *testing.T) {
-		validMessages := []*Message{
-			{Type: MessageTypePush, Data: "test", Version: ProtocolVersion},
-			{Type: MessageTypePull, Data: "test", Version: ProtocolVersion},
-			{Type: MessageTypeResolve, Data: "test", Version: ProtocolVersion},
-			{Type: MessageTypeReject, Data: "test", Version: ProtocolVersion},
-			{Type: MessageTypeRelease, Data: "test", Version: ProtocolVersion},
-			{Type: MessageTypeAbort, Data: "test", Version: ProtocolVersion},
-			{Type: MessageTypePush, Data: "test", Version: ""}, // Empty version should be valid
+		validMessages := []Message{
+			{"push", "test"},
+			{"pull", ImportID(42)},
+			{"resolve", ExportID(24), "resolved"},
+			{"reject", ExportID(24), "error"},
+			{"release", ImportID(42), uint32(1)},
+			{"abort", "session ended"},
 		}
 
 		for i, msg := range validMessages {
@@ -418,17 +409,18 @@ func TestMessageValidation(t *testing.T) {
 	})
 
 	t.Run("InvalidMessages", func(t *testing.T) {
-		invalidMessages := []*Message{
-			nil,                                                             // Nil message
-			{Type: "", Data: "test", Version: ProtocolVersion},              // Empty type
-			{Type: "invalid", Data: "test", Version: ProtocolVersion},       // Invalid type
-			{Type: MessageTypePush, Data: "test", Version: "999.0"},         // Incompatible version
-			{Type: MessageTypePush, Data: nil, Version: ProtocolVersion},    // Missing data for push
-			{Type: MessageTypePull, Data: nil, Version: ProtocolVersion},    // Missing data for pull
-			{Type: MessageTypeResolve, Data: nil, Version: ProtocolVersion}, // Missing data for resolve
-			{Type: MessageTypeReject, Data: nil, Version: ProtocolVersion},  // Missing data for reject
-			{Type: MessageTypeRelease, Data: nil, Version: ProtocolVersion}, // Missing data for release
-			{Type: MessageTypeAbort, Data: nil, Version: ProtocolVersion},   // Missing data for abort
+		invalidMessages := []Message{
+			nil,                    // Nil message
+			{},                     // Empty message
+			{""},                   // Empty type
+			{"invalid"},            // Invalid type with no data
+			{"push"},               // Missing data for push
+			{"pull"},               // Missing data for pull
+			{"resolve", ExportID(24)}, // Missing value for resolve
+			{"reject", ExportID(24)},  // Missing error for reject
+			{"release", ImportID(42)}, // Missing refCount for release
+			{"abort"},              // Missing reason for abort
+			{123, "test"},          // Non-string type
 		}
 
 		for i, msg := range invalidMessages {
@@ -611,7 +603,7 @@ func TestJSONRoundTrip(t *testing.T) {
 
 	testCases := []struct {
 		name string
-		msg  *Message
+		msg  Message
 	}{
 		{
 			name: "PushMessage",
@@ -654,12 +646,12 @@ func TestJSONRoundTrip(t *testing.T) {
 			}
 
 			// Basic structure should match
-			if decodedMsg.Type != tc.msg.Type {
-				t.Errorf("Type mismatch: expected %q, got %q", tc.msg.Type, decodedMsg.Type)
+			if len(decodedMsg) != len(tc.msg) {
+				t.Errorf("Length mismatch: expected %d, got %d", len(tc.msg), len(decodedMsg))
 			}
 
-			if decodedMsg.Version != tc.msg.Version {
-				t.Errorf("Version mismatch: expected %q, got %q", tc.msg.Version, decodedMsg.Version)
+			if len(decodedMsg) > 0 && decodedMsg[0] != tc.msg[0] {
+				t.Errorf("Type mismatch: expected %q, got %q", tc.msg[0], decodedMsg[0])
 			}
 		})
 	}
