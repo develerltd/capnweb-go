@@ -105,7 +105,15 @@ func (t *MemoryTransport) Close() error {
 		t.closeErr = io.EOF
 	}
 
-	close(t.closeCh)
+	// Only close the channel if it exists and hasn't been closed
+	if t.closeCh != nil {
+		select {
+		case <-t.closeCh:
+			// Already closed
+		default:
+			close(t.closeCh)
+		}
+	}
 	return nil
 }
 

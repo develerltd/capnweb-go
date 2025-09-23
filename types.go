@@ -260,7 +260,7 @@ func (c *CallInfo) String() string {
 
 // Stub represents a reference to a remote object that can be called over RPC.
 // This is a marker interface - actual stub implementations will embed this.
-type Stub interface {
+type StubInterface interface {
 	// GetImportID returns the import ID of the remote object this stub points to.
 	// Returns nil if this is a local stub.
 	GetImportID() *ImportID
