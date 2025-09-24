@@ -12,16 +12,16 @@ import (
 
 // Mock implementations for testing
 
-type MockStub struct {
+type SerializationMockStub struct {
 	importID *ImportID
 	exportID *ExportID
 	disposed bool
 }
 
-func (m *MockStub) GetImportID() *ImportID { return m.importID }
-func (m *MockStub) GetExportID() *ExportID { return m.exportID }
-func (m *MockStub) Dispose() error         { m.disposed = true; return nil }
-func (m *MockStub) IsDisposed() bool       { return m.disposed }
+func (m *SerializationMockStub) GetImportID() *ImportID { return m.importID }
+func (m *SerializationMockStub) GetExportID() *ExportID { return m.exportID }
+func (m *SerializationMockStub) Dispose() error         { m.disposed = true; return nil }
+func (m *SerializationMockStub) IsDisposed() bool       { return m.disposed }
 
 func TestSerializerPrimitiveTypes(t *testing.T) {
 	serializer := NewSerializer(nil)

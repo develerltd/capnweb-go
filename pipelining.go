@@ -112,7 +112,7 @@ func (ps PipelineStatus) String() string {
 // PipelineOperation represents a single operation in a pipeline
 type PipelineOperation struct {
 	ID           OperationID
-	Type         OperationType
+	Type         PipelineOperationType
 	TargetID     ImportID
 	Method       string
 	Arguments    []interface{}
@@ -135,13 +135,13 @@ type PipelineOperation struct {
 // OperationID uniquely identifies an operation
 type OperationID string
 
-// OperationType defines the type of operation
-type OperationType int
+// PipelineOperationType defines the type of operation
+type PipelineOperationType int
 
 const (
-	OperationTypeCall OperationType = iota
-	OperationTypeGet
-	OperationTypeSet
+	PipelineOperationTypeCall PipelineOperationType = iota
+	PipelineOperationTypeGet
+	PipelineOperationTypeSet
 )
 
 // OperationStatus represents the state of an operation
@@ -390,7 +390,7 @@ func (pm *PipelineManager) executeOperation(op *PipelineOperation) error {
 	var result interface{}
 
 	switch op.Type {
-	case OperationTypeCall:
+	case PipelineOperationTypeCall:
 		promise, err := stubImpl.Call(ctx, op.Method, op.Arguments...)
 		if err != nil {
 			op.Status = OperationStatusFailed
@@ -403,7 +403,7 @@ func (pm *PipelineManager) executeOperation(op *PipelineOperation) error {
 		op.Promise = promise
 		result = promise
 
-	case OperationTypeGet:
+	case PipelineOperationTypeGet:
 		promise, err := stubImpl.Get(ctx, op.Method)
 		if err != nil {
 			op.Status = OperationStatusFailed
@@ -543,7 +543,7 @@ func (pb *PipelineBuilder) Call(targetID ImportID, method string, args ...interf
 
 	op := &PipelineOperation{
 		ID:        opID,
-		Type:      OperationTypeCall,
+		Type:      PipelineOperationTypeCall,
 		TargetID:  targetID,
 		Method:    method,
 		Arguments: args,
@@ -560,7 +560,7 @@ func (pb *PipelineBuilder) Get(targetID ImportID, property string) *PipelineBuil
 
 	op := &PipelineOperation{
 		ID:       opID,
-		Type:     OperationTypeGet,
+		Type:     PipelineOperationTypeGet,
 		TargetID: targetID,
 		Method:   property,
 		ResultID: ExportID(time.Now().UnixNano()),
