@@ -496,7 +496,7 @@ func (pm *PerformanceMonitor) GetAllMetrics() map[string]*MethodMetrics {
 	defer pm.metricsMu.RUnlock()
 
 	result := make(map[string]*MethodMetrics)
-	for method, metrics := range pm.metrics {
+	for method := range pm.metrics {
 		result[method] = pm.GetMethodMetrics(method)
 	}
 	return result

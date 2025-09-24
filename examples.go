@@ -125,7 +125,7 @@ func ExamplePromisePipelining() {
 	// In a real implementation, would export and import stubs
 	fmt.Println("Setting up RPC stubs...")
 
-	ctx := context.Background()
+	_ = context.Background() // Context for future use
 
 	// Example of promise pipelining: chain multiple calls
 	fmt.Println("Making pipelined calls...")
@@ -412,6 +412,12 @@ func ExampleCodeGenerationUsage() {
 
 	// This example shows how to use the code generator
 	// In practice, this would be done as a build step
+
+	// Define User type for this example
+	type User struct {
+		ID   int    `json:"id"`
+		Name string `json:"name"`
+	}
 
 	// Define an interface for generation
 	type APIService interface {
