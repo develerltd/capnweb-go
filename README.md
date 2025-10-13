@@ -53,7 +53,7 @@ All major features have been implemented and tested:
 ### Installation
 
 ```bash
-go get github.com/cloudflare/capnweb
+go get github.com/develerltd/capnweb-go
 ```
 
 ### Basic Usage
@@ -66,7 +66,7 @@ import (
     "fmt"
     "log"
 
-    "github.com/cloudflare/capnweb"
+    "github.com/develerltd/capnweb-go"
 )
 
 // Define your API
@@ -106,7 +106,7 @@ package main
 
 import (
     "net/http"
-    "github.com/cloudflare/capnweb"
+    "github.com/develerltd/capnweb-go"
 )
 
 type MyAPI struct{}
@@ -134,7 +134,7 @@ package main
 
 import (
     "net/http"
-    "github.com/cloudflare/capnweb"
+    "github.com/develerltd/capnweb-go"
     "github.com/gorilla/websocket"
 )
 
